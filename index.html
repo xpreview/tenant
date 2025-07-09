@@ -165,7 +165,7 @@
   <label>Monthly Rent (₹)</label>
   <input type="number" id="rent" required />
 
-  <label>Total Paid So Far (₹)</label>
+  <label>Total Paid So Far Since Check-in (₹)</label>
   <input type="number" id="rentPaid" value="0" />
 
   <label>Electricity Start Unit</label>
@@ -436,6 +436,12 @@ const days = Math.ceil((todayMidnight - checkinDate) / (1000 * 60 * 60 * 24));
     XLSX.writeFile(wb, fileName);
   }
 </script>
+
+<footer style="margin-top: 40px; text-align: center; color: #666; font-size: 14px;">
+  <hr style="margin-bottom: 10px;">
+  📌 <strong>Note:</strong> This page updates due rent daily at midnight 12 AM automatically. And the electricity bill based on ₹10/unit.<br>
+  🛠️ For Support: +913583355747
+</footer>
 
 </body>
 </html>
