@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Room Rental Register</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #f0f2f5;
+    }
+    h1 { text-align: center; }
+    #dateNow { text-align: center; margin-bottom: 15px; color: #666; }
+
+    form {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 8px #ccc;
+      margin-bottom: 20px;
+    }
+    label { font-weight: bold; display: block; margin-top: 10px; }
+    input { width: 100%; padding: 8px; margin-top: 5px; }
+
+    button {
+      margin-top: 10px;
+      padding: 10px 20px;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      box-shadow: 0 0 10px #ccc;
+      font-size: 14px;
+    }
+
+    th, td {
+      border: 1px solid #ccc;
+      padding: 10px;
+      text-align: center;
+    }
+
+    th { background: #007bff; color: white; }
+    .highlight { background-color: #ffe4e4; }
+    .status-green { color: green; font-weight: bold; }
+    .status-red { color: red; font-weight: bold; }
+  </style>
+</head>
+<body>
+
+<h1>🏠 Room Rental Register</h1>
+<div id="dateNow">📅 Today: </div>
+
+<form id="tenantForm">
+  <label>Tenant Name</label>
+  <input type="text" id="name" required />
+
+  <label>Mobile Number</label>
+  <input type="text" id="mobile" required />
+
+  <label>Aadhaar Number</label>
+  <input type="text" id="aadhaar" required />
+
+  <label>Room Number</label>
+  <input type="text" id="room" required />
+
+  <label>Check-in Date</label>
+  <input type="date" id="checkin" required />
+
+  <label>People Count</label>
+  <input type="number" id="people" min="1" value="1" />
+
+  <label>Monthly Rent (₹)</label>
+  <input type="number" id="rent" required />
+
+  <label>Total Paid So Far (₹)</label>
+  <input type="number" id="rentPaid" value="0" />
+
+  <label>Electricity Start Unit</label>
+  <input type="number" id="startUnit" required />
+
+  <label>Electricity Current Unit</label>
+  <input type="number" id="endUnit" required />
+
+  <button type="submit">➕ Add Tenant</button>
+</form>
+
+<table>
+  <thead>
+    <tr>
+      <th>Tenant</th>
+      <th>Room</th>
+      <th>Check-in<br>+ Days</th>
+      <th>Rent (₹/day)</th>
+      <th>Rent Due</th>
+      <th>Electricity</th>
+      <th>Total Due</th>
+      <th>Paid</th>
+      <th>Balance</th>
+      <th>Status</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody id="tenantTable"></tbody>
+</table>
+
+<script>
+  const form = document.getElementById('tenantForm');
+  const table = document.getElementById('tenantTable');
+  const dateNow = document.getElementById('dateNow');
+  const today = new Date();
+
+  dateNow.textContent = "📅 Today: " + today.toLocaleDateString();
+
+  let tenants = JSON.parse(localStorage.getItem("tenants") || "[]");
+
+  function saveData() {
+    localStorage.setItem("tenants", JSON.stringify(tenants));
+  }
+
+  function renderTable() {
+    table.innerHTML = "";
+    tenants.forEach((t, i) => {
+      const checkinDate = new Date(t.checkin);
+      const days = Math.ceil((new Date() - checkinDate) / (1000 * 60 * 60 * 24));
+      const months = Math.max(1, Math.floor(days / 30));
+      const perDayRent = (t.rent / 30).toFixed(2);
+      const rentDue = Math.round(perDayRent * days);
+      const elecUnits = t.endUnit - t.startUnit;
+      const elecBill = elecUnits * 10;
+      const totalDue = rentDue + elecBill;
+      const balance = totalDue - t.rentPaid;
+      const isPaid = balance <= 0;
+
+      const row = document.createElement("tr");
+      if (!isPaid) row.classList.add("highlight");
+
+      row.innerHTML = `
+        <td><b>${t.name}</b><br>📞 ${t.mobile}<br>🆔 ${t.aadhaar}</td>
+        <td>${t.room}</td>
+        <td>${t.checkin}<br>(${days} days)</td>
+        <td>₹${perDayRent}/day<br><small>(₹${t.rent}/month)</small></td>
+        <td>₹${rentDue}</td>
+        <td>Start: ${t.startUnit} | Now: ${t.endUnit}<br>(${elecUnits} units = ₹${elecBill})</td>
+        <td><b>₹${totalDue}</b></td>
+        <td><b>₹${t.rentPaid}</b></td>
+        <td><b style="color:${isPaid ? 'green' : 'red'}">₹${balance}</b></td>
+        <td class="${isPaid ? 'status-green' : 'status-red'}">${isPaid ? 'Paid' : 'Due'}</td>
+        <td>
+          <button onclick="edit(${i})">✏️</button>
+          <button onclick="del(${i})">🗑️</button>
+        </td>
+      `;
+      table.appendChild(row);
+    });
+  }
+
+  form.onsubmit = e => {
+    e.preventDefault();
+    const tenant = {
+      name: document.getElementById('name').value,
+      mobile: document.getElementById('mobile').value,
+      aadhaar: document.getElementById('aadhaar').value,
+      room: document.getElementById('room').value,
+      checkin: document.getElementById('checkin').value,
+      people: parseInt(document.getElementById('people').value),
+      rent: parseInt(document.getElementById('rent').value),
+      rentPaid: parseInt(document.getElementById('rentPaid').value),
+      startUnit: parseInt(document.getElementById('startUnit').value),
+      endUnit: parseInt(document.getElementById('endUnit').value),
+    };
+    tenants.push(tenant);
+    saveData();
+    renderTable();
+    form.reset();
+  };
+
+  function del(index) {
+    if (confirm("Delete this tenant?")) {
+      tenants.splice(index, 1);
+      saveData();
+      renderTable();
+    }
+  }
+
+  function edit(index) {
+    const t = tenants[index];
+    const newPaid = prompt("Enter new total amount paid ₹:", t.rentPaid);
+    if (newPaid !== null && !isNaN(newPaid)) {
+      tenants[index].rentPaid = parseInt(newPaid);
+    }
+
+    const newEndUnit = prompt("Enter updated electricity current unit:", t.endUnit);
+    if (newEndUnit !== null && !isNaN(newEndUnit)) {
+      tenants[index].endUnit = parseInt(newEndUnit);
+    }
+
+    saveData();
+    renderTable();
+  }
+
+  renderTable();
+</script>
+</body>
+</html>
