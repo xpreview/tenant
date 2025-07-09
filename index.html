@@ -58,9 +58,17 @@
     .status-green { color: green; font-weight: bold; }
     .status-red { color: red; font-weight: bold; }
 
+    /* Toggle only visible on mobile */
+    #viewToggleWrapper {
+      display: none;
+      text-align: center;
+      margin: 15px 0;
+    }
+
+    /* Mobile Styles */
     @media (max-width: 768px) {
-      body {
-        padding: 10px;
+      #viewToggleWrapper {
+        display: block;
       }
       table {
         font-size: 12px;
@@ -70,6 +78,35 @@
         padding: 5px 10px;
         font-size: 12px;
       }
+
+      .vertical-view table {
+        display: none;
+      }
+
+      .vertical-view .card-view {
+        display: block;
+      }
+    }
+
+    .card-view {
+      display: none;
+    }
+
+    .card {
+      background: white;
+      margin-bottom: 15px;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 0 5px #aaa;
+    }
+
+    .card p {
+      margin: 5px 0;
+    }
+
+    .card b {
+      display: inline-block;
+      width: 120px;
     }
   </style>
 </head>
@@ -112,8 +149,15 @@
   <button type="submit">➕ Add Tenant</button>
 </form>
 
+<div id="viewToggleWrapper">
+  <select id="viewToggle" onchange="switchView()" style="padding:5px; border-radius:5px;">
+    <option value="vertical" selected>Vertical View</option>
+    <option value="horizontal">Horizontal View</option>
+  </select>
+</div>
+
 <div class="table-wrapper">
-  <table>
+  <table id="tenantTableHorizontal">
     <thead>
       <tr>
         <th>Tenant</th>
@@ -130,13 +174,16 @@
         <th>Actions</th>
       </tr>
     </thead>
-    <tbody id="tenantTable"></tbody>
+    <tbody id="tenantTableBody"></tbody>
   </table>
+
+  <div class="card-view" id="cardViewContainer"></div>
 </div>
 
 <script>
   const form = document.getElementById('tenantForm');
-  const table = document.getElementById('tenantTable');
+  const tableBody = document.getElementById('tenantTableBody');
+  const cardView = document.getElementById('cardViewContainer');
   const dateNow = document.getElementById('dateNow');
   const today = new Date();
 
@@ -149,7 +196,9 @@
   }
 
   function renderTable() {
-    table.innerHTML = "";
+    tableBody.innerHTML = "";
+    cardView.innerHTML = "";
+
     tenants.forEach((t, i) => {
       const checkinDate = new Date(t.checkin);
       const days = Math.ceil((new Date() - checkinDate) / (1000 * 60 * 60 * 24));
@@ -162,6 +211,7 @@
       const isPaid = balance <= 0;
       const lastPaid = t.lastPayment ? new Date(t.lastPayment).toLocaleString() : 'N/A';
 
+      // Horizontal row
       const row = document.createElement("tr");
       if (!isPaid) row.classList.add("highlight");
 
@@ -169,7 +219,7 @@
         <td><b>${t.name}</b><br>📞 ${t.mobile}<br>🆔 ${t.aadhaar}</td>
         <td>${t.room}</td>
         <td>${t.checkin}<br>(${days} days)</td>
-        <td>₹${perDayRent}<br><small>(₹${t.rent}/month)</small></td>
+        <td>₹${perDayRent}/day<br><small>(₹${t.rent}/month)</small></td>
         <td>₹${rentDue}</td>
         <td>${t.startUnit} → ${t.endUnit}<br>${elecUnits} Units = ₹${elecBill}</td>
         <td><b>₹${totalDue}</b></td>
@@ -183,7 +233,32 @@
           <button onclick="del(${i})">🗑️</button>
         </td>
       `;
-      table.appendChild(row);
+      tableBody.appendChild(row);
+
+      // Vertical card
+      const card = document.createElement("div");
+      card.className = "card";
+      card.innerHTML = `
+        <p><b>Tenant:</b> ${t.name}</p>
+        <p><b>Mobile:</b> ${t.mobile}</p>
+        <p><b>Aadhaar:</b> ${t.aadhaar}</p>
+        <p><b>Room:</b> ${t.room}</p>
+        <p><b>Check-in:</b> ${t.checkin} (${days} days)</p>
+        <p><b>Rent:</b> ₹${perDayRent}/day (₹${t.rent}/month)</p>
+        <p><b>Rent Due:</b> ₹${rentDue}</p>
+        <p><b>Electricity:</b> ${t.startUnit} → ${t.endUnit} = ₹${elecBill}</p>
+        <p><b>Total Due:</b> ₹${totalDue}</p>
+        <p><b>Paid:</b> ₹${t.rentPaid}</p>
+        <p><b>Final Due:</b> <span style="color:${isPaid ? 'green' : 'red'}">₹${balance}</span></p>
+        <p><b>Status:</b> <span class="${isPaid ? 'status-green' : 'status-red'}">${isPaid ? 'Paid' : 'Due'}</span></p>
+        <p><b>Last Payment:</b> ${lastPaid}</p>
+        <p>
+          <button onclick="edit(${i})">✏️</button>
+          <button onclick="undo(${i})">↩️</button>
+          <button onclick="del(${i})">🗑️</button>
+        </p>
+      `;
+      cardView.appendChild(card);
     });
   }
 
@@ -230,26 +305,48 @@
   }
 
   function undo(index) {
-  const t = tenants[index];
-  if (!t.history || t.history.length === 0) {
-    alert("⚠️ No previous payment to undo.");
-    return;
+    const t = tenants[index];
+    if (!t.history || t.history.length === 0) {
+      alert("⚠️ No previous payment to undo.");
+      return;
+    }
+
+    const last = t.history[t.history.length - 1];
+    const confirmUndo = confirm(`⚠️ Undo last payment of ₹${last.amount} made on ${new Date(last.date).toLocaleString()}?`);
+    if (confirmUndo) {
+      t.history.pop();
+      t.rentPaid -= last.amount;
+      t.lastPayment = t.history.length > 0 ? t.history[t.history.length - 1].date : null;
+      saveData();
+      renderTable();
+    }
   }
 
-  const last = t.history[t.history.length - 1];
-  const confirmUndo = confirm(`⚠️ Are you sure you want to undo the last payment of ₹${last.amount} made on ${new Date(last.date).toLocaleString()}?\n\nThis action cannot be undone again.`);
+  function del(index) {
+    if (confirm("🗑️ Are you sure you want to delete this tenant?")) {
+      tenants.splice(index, 1);
+      saveData();
+      renderTable();
+    }
+  }
 
-  if (confirmUndo) {
-    t.history.pop();
-    t.rentPaid -= last.amount;
-    t.lastPayment = t.history.length > 0 ? t.history[t.history.length - 1].date : null;
-    saveData();
+  function switchView() {
+    const view = document.getElementById("viewToggle").value;
+    const wrapper = document.querySelector(".table-wrapper");
+    if (view === "vertical") {
+      wrapper.classList.add("vertical-view");
+    } else {
+      wrapper.classList.remove("vertical-view");
+    }
+  }
+
+  window.addEventListener("load", () => {
+    if (window.innerWidth <= 768) {
+      document.getElementById("viewToggle").value = "vertical";
+      switchView();
+    }
     renderTable();
-    alert(`⚠️ Last payment of ₹${last.amount} will be deleted. Click OK.`);
-  }
-}
-
-  renderTable();
+  });
 </script>
 
 </body>
