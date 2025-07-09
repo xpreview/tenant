@@ -108,6 +108,34 @@
       display: inline-block;
       width: 120px;
     }
+
+
+.card .field {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+  gap: 10px;
+}
+
+.card .label {
+  font-weight: bold;
+  color: #333;
+  min-width: 120px;
+}
+
+.card .value {
+  text-align: right;
+  flex: 1;
+  color: #555;
+  word-break: break-word;
+}
+
+.card .buttons {
+  justify-content: center;
+  gap: 10px;
+}
+
+
   </style>
 </head>
 <body>
@@ -239,25 +267,26 @@
       const card = document.createElement("div");
       card.className = "card";
       card.innerHTML = `
-        <p><b>Tenant:</b> ${t.name}</p>
-        <p><b>Mobile:</b> ${t.mobile}</p>
-        <p><b>Aadhaar:</b> ${t.aadhaar}</p>
-        <p><b>Room:</b> ${t.room}</p>
-        <p><b>Check-in:</b> ${t.checkin} (${days} days)</p>
-        <p><b>Rent:</b> ₹${perDayRent}/day (₹${t.rent}/month)</p>
-        <p><b>Rent Due:</b> ₹${rentDue}</p>
-        <p><b>Electricity:</b> ${t.startUnit} → ${t.endUnit} = ₹${elecBill}</p>
-        <p><b>Total Due:</b> ₹${totalDue}</p>
-        <p><b>Paid:</b> ₹${t.rentPaid}</p>
-        <p><b>Final Due:</b> <span style="color:${isPaid ? 'green' : 'red'}">₹${balance}</span></p>
-        <p><b>Status:</b> <span class="${isPaid ? 'status-green' : 'status-red'}">${isPaid ? 'Paid' : 'Due'}</span></p>
-        <p><b>Last Payment:</b> ${lastPaid}</p>
-        <p>
-          <button onclick="edit(${i})">✏️</button>
-          <button onclick="undo(${i})">↩️</button>
-          <button onclick="del(${i})">🗑️</button>
-        </p>
-      `;
+  <div class="field"><span class="label">Tenant:</span><span class="value">${t.name}</span></div>
+  <div class="field"><span class="label">Mobile:</span><span class="value">${t.mobile}</span></div>
+  <div class="field"><span class="label">Aadhaar:</span><span class="value">${t.aadhaar}</span></div>
+  <div class="field"><span class="label">Room:</span><span class="value">${t.room}</span></div>
+  <div class="field"><span class="label">Check-in:</span><span class="value">${t.checkin} (${days} days)</span></div>
+  <div class="field"><span class="label">Rent:</span><span class="value">₹${perDayRent}/day (₹${t.rent}/month)</span></div>
+  <div class="field"><span class="label">Rent Due:</span><span class="value">₹${rentDue}</span></div>
+  <div class="field"><span class="label">Electricity:</span><span class="value">${t.startUnit} → ${t.endUnit} (${elecUnits} Units = ₹${elecBill})</span></div>
+  <div class="field"><span class="label">Total Due:</span><span class="value">₹${totalDue}</span></div>
+  <div class="field"><span class="label">Paid:</span><span class="value">₹${t.rentPaid}</span></div>
+  <div class="field"><span class="label">Final Due:</span><span class="value" style="color:${isPaid ? 'green' : 'red'}">₹${balance}</span></div>
+  <div class="field"><span class="label">Status:</span><span class="value ${isPaid ? 'status-green' : 'status-red'}">${isPaid ? 'Paid' : 'Due'}</span></div>
+  <div class="field"><span class="label">Last Payment:</span><span class="value">${lastPaid}</span></div>
+  <div class="field buttons">
+    <button onclick="edit(${i})">✏️</button>
+    <button onclick="undo(${i})">↩️</button>
+    <button onclick="del(${i})">🗑️</button>
+  </div>
+`;
+
       cardView.appendChild(card);
     });
   }
@@ -287,13 +316,15 @@
   function edit(index) {
     const t = tenants[index];
     const pay = prompt("Enter amount paid just now ₹:", 0);
-    if (pay !== null && !isNaN(pay)) {
-      const amt = parseInt(pay);
-      t.rentPaid += amt;
-      t.lastPayment = new Date().toISOString();
-      if (!t.history) t.history = [];
-      t.history.push({ amount: amt, date: t.lastPayment });
-    }
+if (pay !== null) {
+  const amt = parseInt(pay) || 0; // convert blank to 0
+  if (!isNaN(amt)) {
+    t.rentPaid += amt;
+    t.lastPayment = new Date().toISOString();
+    if (!t.history) t.history = [];
+    t.history.push({ amount: amt, date: t.lastPayment });
+  }
+}
 
     const newEndUnit = prompt("Enter updated electricity current unit:", t.endUnit);
     if (newEndUnit !== null && !isNaN(newEndUnit)) {
