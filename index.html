@@ -24,8 +24,8 @@
     input { width: 100%; padding: 8px; margin-top: 5px; }
 
     button {
-      margin-top: 10px;
-      padding: 10px 20px;
+      margin-top: 5px;
+      padding: 6px 12px;
       background: #007bff;
       color: white;
       border: none;
@@ -33,24 +33,44 @@
       cursor: pointer;
     }
 
+    .table-wrapper {
+      overflow-x: auto;
+    }
+
     table {
       width: 100%;
       border-collapse: collapse;
       background: white;
       box-shadow: 0 0 10px #ccc;
-      font-size: 14px;
+      font-size: 13px;
+      min-width: 1100px;
     }
 
     th, td {
       border: 1px solid #ccc;
       padding: 10px;
       text-align: center;
+      vertical-align: top;
     }
 
     th { background: #007bff; color: white; }
     .highlight { background-color: #ffe4e4; }
     .status-green { color: green; font-weight: bold; }
     .status-red { color: red; font-weight: bold; }
+
+    @media (max-width: 768px) {
+      body {
+        padding: 10px;
+      }
+      table {
+        font-size: 12px;
+        min-width: 1000px;
+      }
+      button {
+        padding: 5px 10px;
+        font-size: 12px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -92,24 +112,27 @@
   <button type="submit">➕ Add Tenant</button>
 </form>
 
-<table>
-  <thead>
-    <tr>
-      <th>Tenant</th>
-      <th>Room</th>
-      <th>Check-in<br>+ Days</th>
-      <th>Rent (₹/day)</th>
-      <th>Rent Due</th>
-      <th>Electricity</th>
-      <th>Total Due</th>
-      <th>Paid</th>
-      <th>Balance</th>
-      <th>Status</th>
-      <th>Actions</th>
-    </tr>
-  </thead>
-  <tbody id="tenantTable"></tbody>
-</table>
+<div class="table-wrapper">
+  <table>
+    <thead>
+      <tr>
+        <th>Tenant</th>
+        <th>Room</th>
+        <th>Check-in + Days</th>
+        <th>Rent (₹/day)</th>
+        <th>Rent Due</th>
+        <th>Electricity</th>
+        <th>Total Due</th>
+        <th>Paid</th>
+        <th>Final Due</th>
+        <th>Status</th>
+        <th>Last Payment</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="tenantTable"></tbody>
+  </table>
+</div>
 
 <script>
   const form = document.getElementById('tenantForm');
@@ -130,7 +153,6 @@
     tenants.forEach((t, i) => {
       const checkinDate = new Date(t.checkin);
       const days = Math.ceil((new Date() - checkinDate) / (1000 * 60 * 60 * 24));
-      const months = Math.max(1, Math.floor(days / 30));
       const perDayRent = (t.rent / 30).toFixed(2);
       const rentDue = Math.round(perDayRent * days);
       const elecUnits = t.endUnit - t.startUnit;
@@ -138,6 +160,7 @@
       const totalDue = rentDue + elecBill;
       const balance = totalDue - t.rentPaid;
       const isPaid = balance <= 0;
+      const lastPaid = t.lastPayment ? new Date(t.lastPayment).toLocaleString() : 'N/A';
 
       const row = document.createElement("tr");
       if (!isPaid) row.classList.add("highlight");
@@ -146,15 +169,17 @@
         <td><b>${t.name}</b><br>📞 ${t.mobile}<br>🆔 ${t.aadhaar}</td>
         <td>${t.room}</td>
         <td>${t.checkin}<br>(${days} days)</td>
-        <td>₹${perDayRent}/day<br><small>(₹${t.rent}/month)</small></td>
+        <td>₹${perDayRent}<br><small>(₹${t.rent}/month)</small></td>
         <td>₹${rentDue}</td>
-        <td>Start: ${t.startUnit} | Now: ${t.endUnit}<br>(${elecUnits} units = ₹${elecBill})</td>
+        <td>${t.startUnit} → ${t.endUnit}<br>${elecUnits} Units = ₹${elecBill}</td>
         <td><b>₹${totalDue}</b></td>
         <td><b>₹${t.rentPaid}</b></td>
         <td><b style="color:${isPaid ? 'green' : 'red'}">₹${balance}</b></td>
         <td class="${isPaid ? 'status-green' : 'status-red'}">${isPaid ? 'Paid' : 'Due'}</td>
+        <td><small>${lastPaid}</small></td>
         <td>
           <button onclick="edit(${i})">✏️</button>
+          <button onclick="undo(${i})">↩️</button>
           <button onclick="del(${i})">🗑️</button>
         </td>
       `;
@@ -175,6 +200,8 @@
       rentPaid: parseInt(document.getElementById('rentPaid').value),
       startUnit: parseInt(document.getElementById('startUnit').value),
       endUnit: parseInt(document.getElementById('endUnit').value),
+      lastPayment: null,
+      history: []
     };
     tenants.push(tenant);
     saveData();
@@ -182,31 +209,48 @@
     form.reset();
   };
 
-  function del(index) {
-    if (confirm("Delete this tenant?")) {
-      tenants.splice(index, 1);
-      saveData();
-      renderTable();
-    }
-  }
-
   function edit(index) {
     const t = tenants[index];
-    const newPaid = prompt("Enter new total amount paid ₹:", t.rentPaid);
-    if (newPaid !== null && !isNaN(newPaid)) {
-      tenants[index].rentPaid = parseInt(newPaid);
+    const pay = prompt("Enter amount paid just now ₹:", 0);
+    if (pay !== null && !isNaN(pay)) {
+      const amt = parseInt(pay);
+      t.rentPaid += amt;
+      t.lastPayment = new Date().toISOString();
+      if (!t.history) t.history = [];
+      t.history.push({ amount: amt, date: t.lastPayment });
     }
 
     const newEndUnit = prompt("Enter updated electricity current unit:", t.endUnit);
     if (newEndUnit !== null && !isNaN(newEndUnit)) {
-      tenants[index].endUnit = parseInt(newEndUnit);
+      t.endUnit = parseInt(newEndUnit);
     }
 
     saveData();
     renderTable();
   }
 
+  function undo(index) {
+  const t = tenants[index];
+  if (!t.history || t.history.length === 0) {
+    alert("⚠️ No previous payment to undo.");
+    return;
+  }
+
+  const last = t.history[t.history.length - 1];
+  const confirmUndo = confirm(`⚠️ Are you sure you want to undo the last payment of ₹${last.amount} made on ${new Date(last.date).toLocaleString()}?\n\nThis action cannot be undone again.`);
+
+  if (confirmUndo) {
+    t.history.pop();
+    t.rentPaid -= last.amount;
+    t.lastPayment = t.history.length > 0 ? t.history[t.history.length - 1].date : null;
+    saveData();
+    renderTable();
+    alert(`⚠️ Last payment of ₹${last.amount} will be deleted. Click OK.`);
+  }
+}
+
   renderTable();
 </script>
+
 </body>
 </html>
