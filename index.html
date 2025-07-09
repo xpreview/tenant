@@ -229,7 +229,13 @@
 
     tenants.forEach((t, i) => {
       const checkinDate = new Date(t.checkin);
-      const days = Math.ceil((new Date() - checkinDate) / (1000 * 60 * 60 * 24));
+      const todayMidnight = new Date();
+todayMidnight.setHours(0, 0, 0, 0);
+
+checkinDate.setHours(0, 0, 0, 0);
+
+const days = Math.ceil((todayMidnight - checkinDate) / (1000 * 60 * 60 * 24));
+
       const perDayRent = (t.rent / 30).toFixed(2);
       const rentDue = Math.round(perDayRent * days);
       const elecUnits = t.endUnit - t.startUnit;
@@ -387,7 +393,13 @@ if (pay !== null) {
   function exportTenant(index) {
     const t = tenants[index];
     const checkinDate = new Date(t.checkin);
-    const days = Math.ceil((new Date() - checkinDate) / (1000 * 60 * 60 * 24));
+    const todayMidnight = new Date();
+todayMidnight.setHours(0, 0, 0, 0);
+
+checkinDate.setHours(0, 0, 0, 0);
+
+const days = Math.ceil((todayMidnight - checkinDate) / (1000 * 60 * 60 * 24));
+
     const perDayRent = (t.rent / 30).toFixed(2);
     const rentDue = Math.round(perDayRent * days);
     const elecUnits = t.endUnit - t.startUnit;
