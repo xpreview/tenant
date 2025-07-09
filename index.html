@@ -188,8 +188,8 @@
   <table id="tenantTableHorizontal">
     <thead>
       <tr>
-        <th>Tenant</th>
-        <th>Room</th>
+        <th>Tenant Name</th>
+        <th>Room No.</th>
         <th>Check-in + Days</th>
         <th>Rent (₹/day)</th>
         <th>Rent Due</th>
@@ -255,14 +255,14 @@ const days = Math.ceil((todayMidnight - checkinDate) / (1000 * 60 * 60 * 24));
         <td>${t.checkin}<br>(${days} days)</td>
         <td>₹${perDayRent}/day<br><small>(₹${t.rent}/month)</small></td>
         <td>₹${rentDue}</td>
-        <td>${t.startUnit} → ${t.endUnit}<br>${elecUnits} Units = ₹${elecBill}</td>
+        <td>${t.startUnit} → ${t.endUnit}<br>${elecUnits} units = ₹${elecBill}</td>
         <td><b>₹${totalDue}</b></td>
         <td><b>₹${t.rentPaid}</b></td>
         <td><b style="color:${isPaid ? 'green' : 'red'}">₹${balance}</b></td>
         <td class="${isPaid ? 'status-green' : 'status-red'}">${isPaid ? 'Paid' : 'Due'}</td>
         <td><small>${lastPaid}</small></td>
         <td>
-          <button onclick="edit(${i})">✏️</button>
+          <button onclick="edit(${i})">Entry✏️</button>
           <button onclick="undo(${i})">↩️</button>
           <button onclick="del(${i})">🗑️</button>
           <button onclick="exportTenant(${i})">📥</button>
@@ -288,7 +288,7 @@ const days = Math.ceil((todayMidnight - checkinDate) / (1000 * 60 * 60 * 24));
   <div class="field"><span class="label">Status:</span><span class="value ${isPaid ? 'status-green' : 'status-red'}">${isPaid ? 'Paid' : 'Due'}</span></div>
   <div class="field"><span class="label">Last Payment:</span><span class="value">${lastPaid}</span></div>
   <div class="field buttons">
-    <button onclick="edit(${i})">✏️</button>
+    <button onclick="edit(${i})">Entry✏️</button>
     <button onclick="undo(${i})">↩️</button>
     <button onclick="del(${i})">🗑️</button>
     <button onclick="exportTenant(${i})">📥</button>
@@ -419,7 +419,7 @@ const days = Math.ceil((todayMidnight - checkinDate) / (1000 * 60 * 60 * 24));
       ["Monthly Rent", `₹${t.rent}`],
       ["Per Day Rent", `₹${perDayRent}`],
       ["Rent Due", `₹${rentDue}`],
-      ["Electricity Usage", `${t.startUnit} → ${t.endUnit} = ${elecUnits} Units = ₹${elecBill}`],
+      ["Electricity Usage", `${t.startUnit} → ${t.endUnit} = ${elecUnits} units = ₹${elecBill}`],
       ["Electricity Bill", `₹${elecBill}`],
       ["Total Due", `₹${totalDue}`],
       ["Paid So Far", `₹${t.rentPaid}`],
