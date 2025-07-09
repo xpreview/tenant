@@ -259,6 +259,7 @@
           <button onclick="edit(${i})">✏️</button>
           <button onclick="undo(${i})">↩️</button>
           <button onclick="del(${i})">🗑️</button>
+          <button onclick="exportTenant(${i})">📥</button>
         </td>
       `;
       tableBody.appendChild(row);
@@ -284,6 +285,7 @@
     <button onclick="edit(${i})">✏️</button>
     <button onclick="undo(${i})">↩️</button>
     <button onclick="del(${i})">🗑️</button>
+    <button onclick="exportTenant(${i})">📥</button>
   </div>
 `;
 
@@ -378,6 +380,49 @@ if (pay !== null) {
     }
     renderTable();
   });
+</script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+  function exportTenant(index) {
+    const t = tenants[index];
+    const checkinDate = new Date(t.checkin);
+    const days = Math.ceil((new Date() - checkinDate) / (1000 * 60 * 60 * 24));
+    const perDayRent = (t.rent / 30).toFixed(2);
+    const rentDue = Math.round(perDayRent * days);
+    const elecUnits = t.endUnit - t.startUnit;
+    const elecBill = elecUnits * 10;
+    const totalDue = rentDue + elecBill;
+    const balance = totalDue - t.rentPaid;
+    const isPaid = balance <= 0;
+    const lastPaid = t.lastPayment ? new Date(t.lastPayment).toLocaleString() : 'N/A';
+
+    const data = [
+      ["Tenant Name", t.name],
+      ["Mobile Number", t.mobile],
+      ["Aadhaar", t.aadhaar],
+      ["Room Number", t.room],
+      ["Check-in Date", t.checkin],
+      ["Days Stayed", days],
+      ["Monthly Rent", `₹${t.rent}`],
+      ["Per Day Rent", `₹${perDayRent}`],
+      ["Rent Due", `₹${rentDue}`],
+      ["Electricity Usage", `${t.startUnit} → ${t.endUnit} = ${elecUnits} Units = ₹${elecBill}`],
+      ["Electricity Bill", `₹${elecBill}`],
+      ["Total Due", `₹${totalDue}`],
+      ["Paid So Far", `₹${t.rentPaid}`],
+      ["Final Due", `₹${balance}`],
+      ["Status", isPaid ? "Paid" : "Due"],
+      ["Last Payment", lastPaid],
+    ];
+
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Tenant");
+
+    const fileName = `Tenant_${t.name.replace(/\s+/g, "_")}_Room${t.room}.xlsx`;
+    XLSX.writeFile(wb, fileName);
+  }
 </script>
 
 </body>
